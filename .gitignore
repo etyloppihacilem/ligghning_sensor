@@ -1,0 +1,6 @@
+build
+build/**
+Session.vim
+compile_commands.json
+.cache
+.cache/**
