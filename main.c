@@ -8,15 +8,15 @@
 
 ##################################################################################################################### */
 
+#include "hardware/gpio.h"
+#include "hardware/spi.h"
+#include "pico/stdlib.h"
+#include "pico/time.h"
 #include <stdint.h>
 #include <stdio.h>
-#include "pico/stdlib.h"
-#include "hardware/spi.h"
-#include "hardware/gpio.h"
-#include "pico/time.h"
 
 #define MISO 16
-#define CS   17
+#define CS 17
 #define SCLK 18
 #define MOSI 19
 #define INTR 20
@@ -24,35 +24,41 @@
 #define SPI_PORT spi0
 
 #define INT_NH 0b0001
-#define INT_D  0b0100
-#define INT_L  0b1000
+#define INT_D 0b0100
+#define INT_L 0b1000
 
-#define G_INDORE  0b00100100 // [5:1]
+#define G_INDORE 0b00100100  // [5:1]
 #define G_OUTDORE 0b00011100 // [5:1]
 
 void set_gain(bool indore) { // true for indore, false for outdor
     uint8_t data[2];
     data[0] = 0x40 | 0x00; // Asking to read 0x00
-    gpio_put(CS, 0); // begin writing command
+    gpio_put(CS, 0);       // begin writing command
     spi_write_blocking(SPI_PORT, data, 1);
     spi_read_blocking(SPI_PORT, 0, data + 1, 1);
     gpio_put(CS, 1);
     uint8_t res = 0b10000001 & data[1];
-    data[0] = 0x00 | 0x00; // asking to write to 0x00
-    data[1] = res | (indore ? G_INDORE : G_OUTDORE);
+    data[0]     = 0x00 | 0x00; // asking to write to 0x00
+    data[1]     = res | (indore ? G_INDORE : G_OUTDORE);
     gpio_put(CS, 0); // begin writing command
     spi_write_blocking(SPI_PORT, data, 2);
     gpio_put(CS, 1);
 }
 
-void read_event(){
+void read_event() {
     uint8_t data[2];
     data[0] = 0x40 | 0x03; // Asking to read 0x03
-    gpio_put(CS, 0); // begin writing command
+    printf("Flag 1.\n");
+    gpio_put(CS, 0);       // begin writing command
+    printf("Flag 2.\n");
     spi_write_blocking(SPI_PORT, data, 1);
+    printf("Flag 3.\n");
     spi_read_blocking(SPI_PORT, 0, data + 1, 1);
+    printf("Flag 4.\n");
     gpio_put(CS, 1);
+    printf("Flag 5.\n");
     uint8_t res = 0x0f & data[1];
+    printf("Flag 6.\n");
     if (res == INT_NH)
         printf("Noise detected.\n");
     if (res == INT_D)
@@ -65,26 +71,27 @@ void read_event(){
 
 void gpio_callback(uint gpio, uint32_t events) {
     printf("Event detected.\n");
+    sleep_ms(10);
     read_event();
 }
 
-int main(){
+int main() {
     stdio_init_all(); // Initialise I/O for USB Serial
 
     spi_init(SPI_PORT, 200000); // Initialise spi0 at 500kHz
 
-    //Initialise GPIO pins for SPI communication
+    // Initialise GPIO pins for SPI communication
     gpio_set_function(MISO, GPIO_FUNC_SPI);
     gpio_set_function(SCLK, GPIO_FUNC_SPI);
     gpio_set_function(MOSI, GPIO_FUNC_SPI);
 
     // Configure Chip Select
-    gpio_init(CS); // Initialise CS Pin
+    gpio_init(CS);              // Initialise CS Pin
     gpio_set_dir(CS, GPIO_OUT); // Set CS as output
-    gpio_put(CS, 1); // Set CS High to indicate no currect SPI communication
+    gpio_put(CS, 1);            // Set CS High to indicate no currect SPI communication
     // Configure interrupt
     gpio_set_dir(INTR, GPIO_IN);
-    gpio_pull_down(INTR);
+    /* gpio_pull_down(INTR); */
 
     gpio_set_irq_enabled_with_callback(INTR, GPIO_IRQ_EDGE_RISE, true, &gpio_callback);
     uint8_t i = 0;
@@ -97,7 +104,7 @@ int main(){
         sleep_ms(ping * 1000);
         printf("ping %d\n", i++);
         if (i > 9) {
-            ping = 60;
+            /* ping = 60; */
             i = 0;
         }
     }
